@@ -9,6 +9,8 @@ struct MRRowView: View {
 
     /// Доступные группы для перемещения MR.
     let groups: [TaskGroup]
+    var chainToPrevious = false
+    var chainToNext = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -72,6 +74,11 @@ struct MRRowView: View {
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(statusColor.opacity(0.35))
         )
+        .overlay(alignment: .trailing) {
+            if chainToPrevious || chainToNext {
+                chainRail
+            }
+        }
         .contextMenu { contextMenu }
     }
 
@@ -153,6 +160,26 @@ struct MRRowView: View {
         Label(mr.ciStatus.label, systemImage: mr.ciStatus.symbol)
             .font(.caption)
             .foregroundStyle(ciColor)
+    }
+
+    private var chainRail: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(chainToPrevious ? Color.accentColor.opacity(0.62) : .clear)
+                .frame(width: 2)
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 6, height: 6)
+                .shadow(color: Color.accentColor.opacity(0.25), radius: 2, y: 1)
+            Rectangle()
+                .fill(chainToNext ? Color.accentColor.opacity(0.62) : .clear)
+                .frame(width: 2)
+        }
+        .frame(width: 18)
+        .padding(.vertical, 5)
+        .padding(.trailing, 3)
+        .allowsHitTesting(false)
+        .help("Цепочка MR")
     }
 
     @ViewBuilder

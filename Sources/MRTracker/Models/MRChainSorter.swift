@@ -2,67 +2,72 @@ import Foundation
 import SwiftData
 
 enum MRChainSorter {
+    enum Direction {
+        case up
+        case down
+    }
+
     static func sorted(_ mergeRequests: [MergeRequest]) -> [MergeRequest] {
         let unique = Array(Dictionary(grouping: mergeRequests, by: \.persistentModelID).compactMap { $0.value.first })
-        let sourceToMRs = Dictionary(grouping: unique.filter { !$0.sourceBranch.isEmpty }, by: \.sourceBranch)
-        let ids = Set(unique.map(\.persistentModelID))
+        let adjacency = buildAdjacency(for: unique)
 
-        var predecessorByID: [PersistentIdentifier: MergeRequest] = [:]
-        var hasSuccessorIDs = Set<PersistentIdentifier>()
-
-        for mr in unique where !mr.targetBranch.isEmpty {
-            guard let successor = sourceToMRs[mr.targetBranch]?.sorted(by: baseSort).first else { continue }
-            guard successor.persistentModelID != mr.persistentModelID else { continue }
-            predecessorByID[successor.persistentModelID] = mr
-            hasSuccessorIDs.insert(mr.persistentModelID)
-        }
-
-        let roots = unique
-            .filter { !hasSuccessorIDs.contains($0.persistentModelID) }
-            .sorted(by: baseSort)
-
-        var result: [MergeRequest] = []
         var visited = Set<PersistentIdentifier>()
-
-        for root in roots {
-            appendChain(from: root, predecessorByID: predecessorByID, ids: ids, visited: &visited, result: &result)
-        }
+        var components: [[MergeRequest]] = []
 
         for mr in unique.sorted(by: baseSort) where !visited.contains(mr.persistentModelID) {
-            appendChain(from: mr, predecessorByID: predecessorByID, ids: ids, visited: &visited, result: &result)
+            var stack = [mr]
+            var component: [MergeRequest] = []
+
+            while let current = stack.popLast() {
+                let id = current.persistentModelID
+                guard !visited.contains(id) else { continue }
+                visited.insert(id)
+                component.append(current)
+
+                for neighbor in adjacency[id, default: []] where !visited.contains(neighbor.persistentModelID) {
+                    stack.append(neighbor)
+                }
+            }
+
+            components.append(component.sorted(by: baseSort))
         }
 
-        return result
+        return components
+            .sorted { lhs, rhs in
+                guard let lhsFirst = lhs.first, let rhsFirst = rhs.first else { return lhs.count > rhs.count }
+                return baseSort(lhsFirst, rhsFirst)
+            }
+            .flatMap { $0 }
+    }
+
+    static func direction(from upper: MergeRequest, to lower: MergeRequest) -> Direction? {
+        guard !upper.sourceBranch.isEmpty || !upper.targetBranch.isEmpty else { return nil }
+        guard !lower.sourceBranch.isEmpty || !lower.targetBranch.isEmpty else { return nil }
+        if !lower.targetBranch.isEmpty, lower.targetBranch == upper.sourceBranch {
+            return .up
+        }
+        if !upper.targetBranch.isEmpty, upper.targetBranch == lower.sourceBranch {
+            return .down
+        }
+        return nil
     }
 
     static func isDirectChainLink(upper: MergeRequest, lower: MergeRequest) -> Bool {
-        guard !upper.sourceBranch.isEmpty, !lower.targetBranch.isEmpty else { return false }
-        return lower.targetBranch == upper.sourceBranch
+        direction(from: upper, to: lower) != nil
     }
 
-    private static func appendChain(
-        from root: MergeRequest,
-        predecessorByID: [PersistentIdentifier: MergeRequest],
-        ids: Set<PersistentIdentifier>,
-        visited: inout Set<PersistentIdentifier>,
-        result: inout [MergeRequest]
-    ) {
-        var chain: [MergeRequest] = []
-        var current: MergeRequest? = root
-        var localVisited = Set<PersistentIdentifier>()
+    private static func buildAdjacency(for mergeRequests: [MergeRequest]) -> [PersistentIdentifier: [MergeRequest]] {
+        var adjacency: [PersistentIdentifier: [MergeRequest]] = [:]
 
-        while let mr = current {
-            let id = mr.persistentModelID
-            guard ids.contains(id), !visited.contains(id), !localVisited.contains(id) else { break }
-            localVisited.insert(id)
-            chain.append(mr)
-            current = predecessorByID[id]
+        for lhs in mergeRequests {
+            for rhs in mergeRequests where lhs.persistentModelID != rhs.persistentModelID {
+                guard direction(from: lhs, to: rhs) != nil else { continue }
+                adjacency[lhs.persistentModelID, default: []].append(rhs)
+                adjacency[rhs.persistentModelID, default: []].append(lhs)
+            }
         }
 
-        for mr in chain {
-            visited.insert(mr.persistentModelID)
-            result.append(mr)
-        }
+        return adjacency
     }
 
     private static func baseSort(_ lhs: MergeRequest, _ rhs: MergeRequest) -> Bool {

@@ -13,61 +13,56 @@ struct MRChainListView: View {
             ForEach(Array(sortedMRs.enumerated()), id: \.element.persistentModelID) { index, mr in
                 if index > 0 {
                     let upper = sortedMRs[index - 1]
-                    if MRChainSorter.isDirectChainLink(upper: upper, lower: mr) {
-                        ChainConnectorView(upper: upper, lower: mr)
+                    if let direction = MRChainSorter.direction(from: upper, to: mr) {
+                        ChainConnectorView(direction: direction)
                     } else {
                         Spacer()
                             .frame(height: 8)
                     }
                 }
 
-                MRRowView(mr: mr, groups: groups)
+                MRRowView(
+                    mr: mr,
+                    groups: groups,
+                    chainToPrevious: hasLinkToPrevious(index),
+                    chainToNext: hasLinkToNext(index)
+                )
             }
         }
+    }
+
+    private func hasLinkToPrevious(_ index: Int) -> Bool {
+        guard index > 0 else { return false }
+        return MRChainSorter.direction(from: sortedMRs[index - 1], to: sortedMRs[index]) != nil
+    }
+
+    private func hasLinkToNext(_ index: Int) -> Bool {
+        guard index < sortedMRs.count - 1 else { return false }
+        return MRChainSorter.direction(from: sortedMRs[index], to: sortedMRs[index + 1]) != nil
     }
 }
 
 private struct ChainConnectorView: View {
-    let upper: MergeRequest
-    let lower: MergeRequest
+    let direction: MRChainSorter.Direction
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack {
+            Spacer(minLength: 0)
             VStack(spacing: 0) {
                 Rectangle()
-                    .fill(Color.accentColor.opacity(0.55))
-                    .frame(width: 2, height: 10)
-                Image(systemName: "arrow.up")
-                    .font(.caption.bold())
+                    .fill(Color.accentColor.opacity(0.62))
+                    .frame(width: 2, height: 7)
+                Image(systemName: direction == .up ? "arrow.up" : "arrow.down")
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.accentColor)
                 Rectangle()
-                    .fill(Color.accentColor.opacity(0.55))
-                    .frame(width: 2, height: 10)
+                    .fill(Color.accentColor.opacity(0.62))
+                    .frame(width: 2, height: 7)
             }
-            .frame(width: 22)
-
-            HStack(spacing: 6) {
-                Text("!\(lower.iid)")
-                    .font(.caption.monospaced().bold())
-                Image(systemName: "arrow.up")
-                    .font(.caption2.bold())
-                Text("!\(upper.iid)")
-                    .font(.caption.monospaced().bold())
-                Text(lower.targetBranch)
-                    .font(.caption.monospaced())
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Color.accentColor.opacity(0.08), in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.accentColor.opacity(0.25)))
-            .help("MR !\(lower.iid) вливается в MR !\(upper.iid) через ветку \(lower.targetBranch)")
-
-            Spacer(minLength: 0)
+            .frame(width: 18)
+            .padding(.trailing, 3)
         }
-        .padding(.leading, 14)
-        .padding(.vertical, 2)
+        .frame(height: 24)
+        .allowsHitTesting(false)
     }
 }

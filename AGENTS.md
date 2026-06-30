@@ -58,9 +58,10 @@ Restoring a folder from archive clears `TaskGroup.isArchived` and clears `isManu
 MR chains are detected by branch names:
 
 - If MR A has `targetBranch == sourceBranch` of MR B, then A is merging into B.
-- The UI should render this top-down as B above A.
-- Chains should remain contiguous even when an unrelated MR is newer.
+- The UI should keep related MR contiguous, but still order MR top-down by freshness: newer MR above older MR.
 - Across separate chains/items, newer GitLab update time (`gitlabUpdatedAt`, falling back to `createdAt`) wins.
+- Draw only visual through-lines/arrows for chain links on the right side near the MR link area. Do not duplicate MR ids or branch names in connector labels.
+- Arrow direction is separate from row order: use an up arrow when the lower MR merges into the upper MR, and a down arrow when the upper MR merges into the lower MR.
 
 The sorting helper is `MRChainSorter.sorted(_:)`. Use it for active MR lists in groups and ungrouped sections.
 

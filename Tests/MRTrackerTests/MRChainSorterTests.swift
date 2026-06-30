@@ -6,16 +6,16 @@ struct MRChainSorterTests {
     @Test func keepsDependentMRsContiguousNewestFirst() {
         let now = Date()
 
-        let oldest = mr(iid: 1, source: "feature/base", target: "feature/middle", updatedAt: now.addingTimeInterval(-300), sortOrder: 1)
-        let middle = mr(iid: 2, source: "feature/middle", target: "feature/top", updatedAt: now.addingTimeInterval(-200), sortOrder: 2)
-        let newest = mr(iid: 3, source: "feature/top", target: "main", updatedAt: now.addingTimeInterval(-100), sortOrder: 3)
+        let oldest = mr(iid: 1, source: "feature/old", target: "main", updatedAt: now.addingTimeInterval(-300), sortOrder: 1)
+        let middle = mr(iid: 2, source: "feature/middle", target: "feature/old", updatedAt: now.addingTimeInterval(-200), sortOrder: 2)
+        let newest = mr(iid: 3, source: "feature/new", target: "feature/middle", updatedAt: now.addingTimeInterval(-100), sortOrder: 3)
         let unrelated = mr(iid: 4, source: "feature/unrelated", target: "main", updatedAt: now, sortOrder: 4)
 
         let sorted = MRChainSorter.sorted([oldest, unrelated, middle, newest])
 
         #expect(sorted.map(\.iid) == [4, 3, 2, 1])
-        #expect(MRChainSorter.isDirectChainLink(upper: newest, lower: middle))
-        #expect(MRChainSorter.isDirectChainLink(upper: middle, lower: oldest))
+        #expect(MRChainSorter.direction(from: newest, to: middle) == .down)
+        #expect(MRChainSorter.direction(from: middle, to: oldest) == .down)
         #expect(!MRChainSorter.isDirectChainLink(upper: unrelated, lower: newest))
     }
 
