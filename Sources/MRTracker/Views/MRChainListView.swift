@@ -13,29 +13,29 @@ struct MRChainListView: View {
             ForEach(Array(sortedMRs.enumerated()), id: \.element.persistentModelID) { index, mr in
                 if index > 0 {
                     let upper = sortedMRs[index - 1]
-                    if MRChainSorter.direction(from: upper, to: mr) == nil {
+                    if let direction = MRChainSorter.direction(from: upper, to: mr) {
+                        ChainConnectorView(direction: direction)
+                    } else {
                         Spacer()
                             .frame(height: 8)
                     }
                 }
 
-                MRRowView(
-                    mr: mr,
-                    groups: groups,
-                    chainFromPrevious: directionFromPrevious(index),
-                    chainToNext: directionToNext(index)
-                )
+                MRRowView(mr: mr, groups: groups)
             }
         }
     }
+}
 
-    private func directionFromPrevious(_ index: Int) -> MRChainSorter.Direction? {
-        guard index > 0 else { return nil }
-        return MRChainSorter.direction(from: sortedMRs[index - 1], to: sortedMRs[index])
-    }
+private struct ChainConnectorView: View {
+    let direction: MRChainSorter.Direction
 
-    private func directionToNext(_ index: Int) -> MRChainSorter.Direction? {
-        guard index < sortedMRs.count - 1 else { return nil }
-        return MRChainSorter.direction(from: sortedMRs[index], to: sortedMRs[index + 1])
+    var body: some View {
+        Image(systemName: direction == .up ? "arrow.up" : "arrow.down")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(Color.accentColor)
+            .frame(maxWidth: .infinity)
+            .frame(height: 14)
+            .allowsHitTesting(false)
     }
 }
