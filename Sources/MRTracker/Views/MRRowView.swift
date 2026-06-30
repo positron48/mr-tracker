@@ -164,7 +164,7 @@ struct MRRowView: View {
         Menu("Группа") {
             Button("Без группы") { mr.group = nil; try? context.save() }
             Divider()
-            ForEach(groups) { g in
+            ForEach(groups.filter { !$0.isArchived }) { g in
                 Button(g.name) { mr.group = g; try? context.save() }
             }
         }

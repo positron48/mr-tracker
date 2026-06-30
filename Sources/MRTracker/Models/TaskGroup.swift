@@ -6,6 +6,7 @@ import SwiftData
 final class TaskGroup {
     var name: String
     var collapsed: Bool
+    var isArchived: Bool = false
     var sortOrder: Int
     var createdAt: Date
 
@@ -15,9 +16,10 @@ final class TaskGroup {
     @Relationship(deleteRule: .cascade, inverse: \CustomLink.group)
     var links: [CustomLink]
 
-    init(name: String, collapsed: Bool = false, sortOrder: Int = 0, createdAt: Date = .now) {
+    init(name: String, collapsed: Bool = false, isArchived: Bool = false, sortOrder: Int = 0, createdAt: Date = .now) {
         self.name = name
         self.collapsed = collapsed
+        self.isArchived = isArchived
         self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.mergeRequests = []

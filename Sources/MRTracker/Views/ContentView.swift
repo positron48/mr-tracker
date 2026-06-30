@@ -5,6 +5,7 @@ struct ContentView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.modelContext) private var context
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     @Query(sort: \MergeRequest.sortOrder) private var allMRs: [MergeRequest]
     @Query(sort: \TaskGroup.sortOrder) private var groups: [TaskGroup]
@@ -14,21 +15,21 @@ struct ContentView: View {
 
     /// Активные MR без группы.
     private var ungroupedActive: [MergeRequest] {
-        allMRs.filter { !$0.isArchived && $0.group == nil }
-            .sorted { lhs, rhs in
-                if lhs.status.order != rhs.status.order { return lhs.status.order < rhs.status.order }
-                return lhs.sortOrder < rhs.sortOrder
-            }
+        MRChainSorter.sorted(allMRs.filter { !$0.isArchived && $0.group == nil })
     }
 
     /// Группы, в которых есть активные MR.
     private var activeGroups: [TaskGroup] {
-        groups.filter { !$0.activeMRs.isEmpty }
+        groups.filter { !$0.isArchived && !$0.activeMRs.isEmpty }
     }
 
     private var archived: [MergeRequest] {
-        allMRs.filter { $0.isArchived }
+        allMRs.filter { $0.isArchived && $0.group?.isArchived != true }
             .sorted { ($0.gitlabUpdatedAt ?? $0.createdAt) > ($1.gitlabUpdatedAt ?? $1.createdAt) }
+    }
+
+    private var archivedGroups: [TaskGroup] {
+        groups.filter(\.isArchived)
     }
 
     var body: some View {
@@ -51,10 +52,10 @@ struct ContentView: View {
                         GroupSectionView(group: group, allGroups: groups)
                     }
                     ForEach(ungroupedActive) { mr in
-                        MRRowView(mr: mr, groups: groups)
+                        MRRowView(mr: mr, groups: groups.filter { !$0.isArchived })
                     }
-                    if !archived.isEmpty {
-                        ArchiveSection(archived: archived, allGroups: groups)
+                    if !archived.isEmpty || !archivedGroups.isEmpty {
+                        ArchiveSection(archived: archived, archivedGroups: archivedGroups, allGroups: groups.filter { !$0.isArchived })
                             .padding(.top, 4)
                     }
                 }
@@ -100,6 +101,11 @@ struct ContentView: View {
                 newGroupName = ""
             } label: {
                 Label("Группа", systemImage: "plus.rectangle.on.rectangle")
+            }
+            Button {
+                openWindow(id: "folders")
+            } label: {
+                Label("Папки", systemImage: "folder")
             }
             Button {
                 Task { await app.refreshAll(context: context) }

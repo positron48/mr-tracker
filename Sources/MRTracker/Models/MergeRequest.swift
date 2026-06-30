@@ -24,6 +24,8 @@ final class MergeRequest {
     var statusRaw: String
     /// true, если пользователь вручную выставил статус (отмену) — sync его не перетирает.
     var manuallyOverridden: Bool
+    /// true, если MR скрыт вместе с архивной папкой без изменения рабочего статуса.
+    var isManuallyArchived: Bool = false
 
     var createdAt: Date
     var sortOrder: Int
@@ -51,6 +53,7 @@ final class MergeRequest {
         unresolvedCount: Int = 0,
         statusRaw: String = MRStatus.created.rawValue,
         manuallyOverridden: Bool = false,
+        isManuallyArchived: Bool = false,
         createdAt: Date = .now,
         sortOrder: Int = 0
     ) {
@@ -66,6 +69,7 @@ final class MergeRequest {
         self.unresolvedCount = unresolvedCount
         self.statusRaw = statusRaw
         self.manuallyOverridden = manuallyOverridden
+        self.isManuallyArchived = isManuallyArchived
         self.createdAt = createdAt
         self.sortOrder = sortOrder
         self.links = []
@@ -81,7 +85,7 @@ final class MergeRequest {
         set { ciStatusRaw = newValue.rawValue }
     }
 
-    var isArchived: Bool { status.isArchived }
+    var isArchived: Bool { status.isArchived || isManuallyArchived || group?.isArchived == true }
 
     /// Показывать ли target-ветку (скрываем main/master).
     var displayTargetBranch: String? {

@@ -11,8 +11,8 @@ struct GroupSectionView: View {
         VStack(alignment: .leading, spacing: 8) {
             header
             if !group.collapsed {
-                ForEach(group.activeMRs.sorted(by: sortMR)) { mr in
-                    MRRowView(mr: mr, groups: allGroups)
+                ForEach(MRChainSorter.sorted(group.activeMRs)) { mr in
+                    MRRowView(mr: mr, groups: allGroups.filter { !$0.isArchived })
                 }
             }
         }
@@ -99,11 +99,6 @@ struct GroupSectionView: View {
 
     @State private var renaming = false
     @State private var newName = ""
-
-    private func sortMR(_ a: MergeRequest, _ b: MergeRequest) -> Bool {
-        if a.status.order != b.status.order { return a.status.order < b.status.order }
-        return a.sortOrder < b.sortOrder
-    }
 
     private func addLink(_ urlString: String) {
         let link = CustomLink(urlString: urlString)

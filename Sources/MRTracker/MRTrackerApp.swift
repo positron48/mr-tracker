@@ -23,6 +23,13 @@ struct MRTrackerApp: App {
         }
         .modelContainer(container)
 
+        Window("Папки", id: "folders") {
+            FolderManagerView()
+                .environment(appModel)
+                .modelContainer(container)
+                .frame(minWidth: 460, minHeight: 360)
+        }
+
         Settings {
             SettingsView()
                 .environment(appModel)
