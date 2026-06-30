@@ -9,8 +9,8 @@ struct MRRowView: View {
 
     /// Доступные группы для перемещения MR.
     let groups: [TaskGroup]
-    var chainToPrevious = false
-    var chainToNext = false
+    var chainFromPrevious: MRChainSorter.Direction? = nil
+    var chainToNext: MRChainSorter.Direction? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -75,7 +75,7 @@ struct MRRowView: View {
                 .strokeBorder(statusColor.opacity(0.35))
         )
         .overlay(alignment: .trailing) {
-            if chainToPrevious || chainToNext {
+            if chainFromPrevious != nil || chainToNext != nil {
                 chainRail
             }
         }
@@ -164,22 +164,40 @@ struct MRRowView: View {
 
     private var chainRail: some View {
         VStack(spacing: 0) {
-            Rectangle()
-                .fill(chainToPrevious ? Color.accentColor.opacity(0.62) : .clear)
-                .frame(width: 2)
-            Circle()
-                .fill(Color.accentColor)
-                .frame(width: 6, height: 6)
-                .shadow(color: Color.accentColor.opacity(0.25), radius: 2, y: 1)
-            Rectangle()
-                .fill(chainToNext ? Color.accentColor.opacity(0.62) : .clear)
-                .frame(width: 2)
+            Spacer()
+                .frame(height: 28)
+            VStack(spacing: 0) {
+                if chainFromPrevious == .down {
+                    arrow(.down)
+                }
+                Rectangle()
+                    .fill(chainFromPrevious == nil ? .clear : Color.accentColor.opacity(0.62))
+                    .frame(width: 2)
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 6, height: 6)
+                    .shadow(color: Color.accentColor.opacity(0.25), radius: 2, y: 1)
+                Rectangle()
+                    .fill(chainToNext == nil ? .clear : Color.accentColor.opacity(0.62))
+                    .frame(width: 2)
+                if chainToNext == .up {
+                    arrow(.up)
+                }
+            }
         }
+        .frame(maxHeight: .infinity)
         .frame(width: 18)
-        .padding(.vertical, 5)
-        .padding(.trailing, 3)
+        .padding(.bottom, 5)
+        .padding(.trailing, 2)
         .allowsHitTesting(false)
         .help("Цепочка MR")
+    }
+
+    private func arrow(_ direction: MRChainSorter.Direction) -> some View {
+        Image(systemName: direction == .up ? "arrow.up" : "arrow.down")
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(Color.accentColor)
+            .frame(width: 12, height: 12)
     }
 
     @ViewBuilder
