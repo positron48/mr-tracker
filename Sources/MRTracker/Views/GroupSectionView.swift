@@ -11,9 +11,7 @@ struct GroupSectionView: View {
         VStack(alignment: .leading, spacing: 8) {
             header
             if !group.collapsed {
-                ForEach(MRChainSorter.sorted(group.activeMRs)) { mr in
-                    MRRowView(mr: mr, groups: allGroups.filter { !$0.isArchived })
-                }
+                MRChainListView(mergeRequests: group.activeMRs, groups: allGroups.filter { !$0.isArchived })
             }
         }
         .padding(10)

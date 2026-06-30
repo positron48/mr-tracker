@@ -14,6 +14,9 @@ struct MRChainSorterTests {
         let sorted = MRChainSorter.sorted([oldest, unrelated, middle, newest])
 
         #expect(sorted.map(\.iid) == [4, 3, 2, 1])
+        #expect(MRChainSorter.isDirectChainLink(upper: newest, lower: middle))
+        #expect(MRChainSorter.isDirectChainLink(upper: middle, lower: oldest))
+        #expect(!MRChainSorter.isDirectChainLink(upper: unrelated, lower: newest))
     }
 
     private func mr(iid: Int, source: String, target: String, updatedAt: Date, sortOrder: Int) -> MergeRequest {

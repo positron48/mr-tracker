@@ -35,6 +35,11 @@ enum MRChainSorter {
         return result
     }
 
+    static func isDirectChainLink(upper: MergeRequest, lower: MergeRequest) -> Bool {
+        guard !upper.sourceBranch.isEmpty, !lower.targetBranch.isEmpty else { return false }
+        return lower.targetBranch == upper.sourceBranch
+    }
+
     private static func appendChain(
         from root: MergeRequest,
         predecessorByID: [PersistentIdentifier: MergeRequest],

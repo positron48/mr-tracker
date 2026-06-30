@@ -51,9 +51,7 @@ struct ContentView: View {
                     ForEach(activeGroups) { group in
                         GroupSectionView(group: group, allGroups: groups)
                     }
-                    ForEach(ungroupedActive) { mr in
-                        MRRowView(mr: mr, groups: groups.filter { !$0.isArchived })
-                    }
+                    MRChainListView(mergeRequests: ungroupedActive, groups: groups.filter { !$0.isArchived })
                     if !archived.isEmpty || !archivedGroups.isEmpty {
                         ArchiveSection(archived: archived, archivedGroups: archivedGroups, allGroups: groups.filter { !$0.isArchived })
                             .padding(.top, 4)
