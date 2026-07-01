@@ -59,6 +59,7 @@ MR chains are detected by branch names:
 
 - If MR A has `targetBranch == sourceBranch` of MR B, then A is merging into B.
 - The UI should keep related MR contiguous, but still order MR top-down by freshness: newer MR above older MR.
+- Chain continuity has priority over status/update-time sorting inside a chain: do not let an approved or recently updated middle MR split or reorder the chain.
 - Across separate chains/items, newer GitLab update time (`gitlabUpdatedAt`, falling back to `createdAt`) wins.
 - Draw only a compact arrow between linked MR rows. Do not add connector labels, duplicate MR ids, duplicate branch names, or draw rails through MR cards.
 - Arrow direction is separate from row order: use an up arrow when the lower MR merges into the upper MR, and a down arrow when the upper MR merges into the lower MR.
