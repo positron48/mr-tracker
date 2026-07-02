@@ -5,6 +5,7 @@ import SwiftData
 struct GroupSectionView: View {
     @Bindable var group: TaskGroup
     let allGroups: [TaskGroup]
+    @Environment(AppModel.self) private var app
     @Environment(\.modelContext) private var context
 
     var body: some View {
@@ -50,6 +51,13 @@ struct GroupSectionView: View {
             .fixedSize()
 
             Menu {
+                Button {
+                    Task { await app.refresh(group, context: context) }
+                } label: {
+                    Label("Обновить", systemImage: "arrow.clockwise")
+                }
+                .disabled(app.isRefreshing || group.activeMRs.isEmpty)
+                Divider()
                 Button("Переименовать") { renaming = true }
                 Button("Удалить группу", role: .destructive) {
                     context.delete(group)

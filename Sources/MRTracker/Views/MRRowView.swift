@@ -11,6 +11,8 @@ struct MRRowView: View {
     let groups: [TaskGroup]
 
     var body: some View {
+        let refreshing = app.isRefreshing(mr)
+
         VStack(alignment: .leading, spacing: 3) {
             // Верхняя строка: заголовок … [+ ссылки] [статус + ссылка на MR].
             HStack(alignment: .top, spacing: 8) {
@@ -61,6 +63,8 @@ struct MRRowView: View {
             }
         }
         .padding(10)
+        .blur(radius: refreshing ? 1.2 : 0)
+        .brightness(refreshing ? 0.06 : 0)
         .background(statusColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 4)
@@ -72,6 +76,13 @@ struct MRRowView: View {
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(statusColor.opacity(0.35))
         )
+        .overlay {
+            if refreshing {
+                MRRefreshOverlay()
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: refreshing)
         .contextMenu { contextMenu }
     }
 
@@ -157,6 +168,13 @@ struct MRRowView: View {
 
     @ViewBuilder
     private var contextMenu: some View {
+        Button {
+            Task { await app.refresh(mr, context: context) }
+        } label: {
+            Label("Обновить", systemImage: "arrow.clockwise")
+        }
+        .disabled(app.isRefreshing(mr))
+        Divider()
         Button("Открыть MR") {
             if let url = URL(string: mr.urlString) { openURL(url) }
         }
@@ -208,5 +226,27 @@ struct MRRowView: View {
         case .running, .pending: return .orange
         default:        return .secondary
         }
+    }
+}
+
+private struct MRRefreshOverlay: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.thinMaterial.opacity(0.72))
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Обновляется")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(0.25)))
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+        }
+        .allowsHitTesting(false)
     }
 }

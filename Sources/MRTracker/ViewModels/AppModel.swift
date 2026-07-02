@@ -10,6 +10,7 @@ final class AppModel {
     // Состояние обновления (для тулбара).
     var isRefreshing = false
     var refreshProgress: (done: Int, total: Int) = (0, 0)
+    private(set) var refreshingMRIDs: Set<PersistentIdentifier> = []
     var lastError: String?
 
     // Профиль/активность для экрана настроек.
@@ -78,16 +79,69 @@ final class AppModel {
         isRefreshing = true
         lastError = nil
         refreshProgress = (0, active.count)
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            refreshingMRIDs.removeAll()
+        }
 
         for (idx, mr) in active.enumerated() {
+            refreshingMRIDs.insert(mr.persistentModelID)
             await syncOne(mr)
+            refreshingMRIDs.remove(mr.persistentModelID)
             refreshProgress = (idx + 1, active.count)
             try? context.save()
             if idx < active.count - 1 {
                 try? await Task.sleep(nanoseconds: throttleNanos)
             }
         }
+    }
+
+    func refresh(_ mr: MergeRequest, context: ModelContext) async {
+        guard !refreshingMRIDs.contains(mr.persistentModelID) else { return }
+        guard KeychainStore.hasCredentials else {
+            lastError = GitLabError.notConfigured.errorDescription
+            return
+        }
+
+        lastError = nil
+        refreshingMRIDs.insert(mr.persistentModelID)
+        defer { refreshingMRIDs.remove(mr.persistentModelID) }
+
+        await syncOne(mr)
+        try? context.save()
+    }
+
+    func refresh(_ group: TaskGroup, context: ModelContext) async {
+        guard !isRefreshing else { return }
+        let active = group.activeMRs
+        guard !active.isEmpty else { return }
+        guard KeychainStore.hasCredentials else {
+            lastError = GitLabError.notConfigured.errorDescription
+            return
+        }
+
+        isRefreshing = true
+        lastError = nil
+        refreshProgress = (0, active.count)
+        defer {
+            isRefreshing = false
+            refreshingMRIDs.removeAll()
+        }
+
+        for (idx, mr) in active.enumerated() {
+            refreshingMRIDs.insert(mr.persistentModelID)
+            await syncOne(mr)
+            refreshingMRIDs.remove(mr.persistentModelID)
+            refreshProgress = (idx + 1, active.count)
+            try? context.save()
+            if idx < active.count - 1 {
+                try? await Task.sleep(nanoseconds: throttleNanos)
+            }
+        }
+    }
+
+    func isRefreshing(_ mr: MergeRequest) -> Bool {
+        refreshingMRIDs.contains(mr.persistentModelID)
     }
 
     /// Тянет снимок одного MR и применяет к модели с учётом «залипания» отмены.

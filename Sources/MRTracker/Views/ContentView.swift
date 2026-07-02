@@ -33,32 +33,45 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 0) {
+            VStack(spacing: 8) {
                 AddMRBar()
-
-                if let err = app.lastError {
-                    Label(err, systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .padding(8)
-                        .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-                }
-
-                if allMRs.isEmpty {
-                    emptyState
-                } else {
-                    ForEach(activeGroups) { group in
-                        GroupSectionView(group: group, allGroups: groups)
-                    }
-                    MRChainListView(mergeRequests: ungroupedActive, groups: groups.filter { !$0.isArchived })
-                    if !archived.isEmpty || !archivedGroups.isEmpty {
-                        ArchiveSection(archived: archived, archivedGroups: archivedGroups, allGroups: groups.filter { !$0.isArchived })
-                            .padding(.top, 4)
-                    }
-                }
+                    .padding(.horizontal, 14)
+                RefreshProgressBar(progress: app.refreshProgress)
+                    .opacity(app.isRefreshing ? 1 : 0)
+                    .frame(height: app.isRefreshing ? 14 : 0)
             }
-            .padding(14)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
+            .background(.background)
+            .zIndex(1)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let err = app.lastError {
+                        Label(err, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .padding(8)
+                            .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    if allMRs.isEmpty {
+                        emptyState
+                    } else {
+                        ForEach(activeGroups) { group in
+                            GroupSectionView(group: group, allGroups: groups)
+                        }
+                        MRChainListView(mergeRequests: ungroupedActive, groups: groups.filter { !$0.isArchived })
+                        if !archived.isEmpty || !archivedGroups.isEmpty {
+                            ArchiveSection(archived: archived, archivedGroups: archivedGroups, allGroups: groups.filter { !$0.isArchived })
+                                .padding(.top, 4)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
+            }
         }
         .navigationTitle("MR Tracker")
         .overlay(alignment: .bottom) {
@@ -84,15 +97,6 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            if app.isRefreshing {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.small)
-                    Text("\(app.refreshProgress.done)/\(app.refreshProgress.total)")
-                        .font(.caption.monospaced())
-                }
-            }
-        }
         ToolbarItemGroup(placement: .primaryAction) {
             Button {
                 showNewGroup = true
@@ -141,5 +145,45 @@ struct ContentView: View {
         let g = TaskGroup(name: name, sortOrder: maxOrder + 1)
         context.insert(g)
         try? context.save()
+    }
+}
+
+private struct RefreshProgressBar: View {
+    let progress: (done: Int, total: Int)
+
+    private var fraction: Double {
+        guard progress.total > 0 else { return 0 }
+        return min(max(Double(progress.done) / Double(progress.total), 0), 1)
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let total = max(progress.total, 1)
+            let width = proxy.size.width
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.quaternary)
+                    .frame(height: 5)
+                Capsule()
+                    .fill(Color.accentColor)
+                    .frame(width: width * fraction, height: 5)
+                    .animation(.easeInOut(duration: 0.22), value: fraction)
+                ForEach(0...total, id: \.self) { tick in
+                    Rectangle()
+                        .fill(tick <= progress.done ? Color.white.opacity(0.8) : Color.secondary.opacity(0.35))
+                        .frame(width: 1, height: tick == 0 || tick == total ? 9 : 7)
+                        .offset(x: tickOffset(tick: tick, total: total, width: width))
+                }
+            }
+            .frame(maxHeight: .infinity)
+        }
+        .accessibilityLabel("Прогресс обновления")
+        .accessibilityValue("\(progress.done) из \(progress.total)")
+    }
+
+    private func tickOffset(tick: Int, total: Int, width: CGFloat) -> CGFloat {
+        guard total > 0 else { return 0 }
+        return (width * CGFloat(tick) / CGFloat(total)) - 0.5
     }
 }
